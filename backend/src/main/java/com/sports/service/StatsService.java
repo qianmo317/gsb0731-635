@@ -1,10 +1,12 @@
 package com.sports.service;
 
 import com.sports.dto.StatsResponse;
+import com.sports.entity.Goal;
 import com.sports.repository.ExerciseRepository;
 import com.sports.repository.GoalRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -22,7 +24,11 @@ public class StatsService {
     
     @Autowired
     private GoalRepository goalRepository;
+
+    @Autowired
+    private GoalService goalService;
     
+    @Transactional
     public StatsResponse getOverview(Long userId) {
         StatsResponse response = new StatsResponse();
         
@@ -43,7 +49,8 @@ public class StatsService {
         Integer totalCalories = exerciseRepository.sumCaloriesByUserIdAndDateRange(userId, monthStart, monthEnd);
         response.setTotalCalories(totalCalories != null ? totalCalories : 0);
         
-        // 目标统计
+        // 先按当前规则刷新所有目标状态，再统计，保证与目标页一致
+        goalService.recalculateGoalsForUser(userId);
         int activeGoals = goalRepository.findByUserIdAndStatus(userId, "ACTIVE").size();
         int completedGoals = goalRepository.findByUserIdAndStatus(userId, "COMPLETED").size();
         response.setActiveGoals(activeGoals);
@@ -131,5 +138,61 @@ public class StatsService {
         }
         
         return result;
+    }
+
+    @Transactional
+    public Map<String, Object> getGoalAchievementSummary(Long userId) {
+        goalService.recalculateGoalsForUser(userId);
+        List<Goal> goals = goalRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        int totalCount = goals.size();
+        int totalCompleted = 0;
+        int specifiedCount = 0;
+        int specifiedCompleted = 0;
+        int unspecifiedCount = 0;
+        int unspecifiedCompleted = 0;
+
+        for (Goal goal : goals) {
+            boolean completed = "COMPLETED".equals(goal.getStatus());
+            if (completed) {
+                totalCompleted++;
+            }
+            if (goal.getSportType() != null) {
+                specifiedCount++;
+                if (completed) {
+                    specifiedCompleted++;
+                }
+            } else {
+                unspecifiedCount++;
+                if (completed) {
+                    unspecifiedCompleted++;
+                }
+            }
+        }
+
+        Map<String, Object> specified = new HashMap<>();
+        specified.put("totalGoals", specifiedCount);
+        specified.put("completedGoals", specifiedCompleted);
+        specified.put("achievementRate", calculateRate(specifiedCompleted, specifiedCount));
+
+        Map<String, Object> unspecified = new HashMap<>();
+        unspecified.put("totalGoals", unspecifiedCount);
+        unspecified.put("completedGoals", unspecifiedCompleted);
+        unspecified.put("achievementRate", calculateRate(unspecifiedCompleted, unspecifiedCount));
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("specified", specified);
+        result.put("unspecified", unspecified);
+        result.put("totalGoals", totalCount);
+        result.put("completedGoals", totalCompleted);
+        result.put("achievementRate", calculateRate(totalCompleted, totalCount));
+        return result;
+    }
+
+    private double calculateRate(int completed, int total) {
+        if (total == 0) {
+            return 0.0;
+        }
+        return Math.round((completed * 1000.0) / total) / 10.0;
     }
 }

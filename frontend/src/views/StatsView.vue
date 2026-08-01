@@ -23,6 +23,53 @@
       </div>
     </div>
     
+    <div class="card goal-summary-card">
+      <div class="card-header">
+        <h3>目标达成汇总</h3>
+      </div>
+      <div class="goal-summary-grid">
+        <div class="summary-block summary-total">
+          <div class="summary-icon">🎯</div>
+          <div class="summary-body">
+            <div class="summary-label">全部目标</div>
+            <div class="summary-numbers">
+              <span class="completed">{{ goalSummary.completedGoals || 0 }}</span>
+              <span class="separator">/</span>
+              <span class="total">{{ goalSummary.totalGoals || 0 }}</span>
+              <span class="summary-unit">个已达成</span>
+            </div>
+            <div class="summary-rate">达成率 {{ goalSummary.achievementRate || 0 }}%</div>
+          </div>
+        </div>
+        <div class="summary-block">
+          <div class="summary-icon">🏷️</div>
+          <div class="summary-body">
+            <div class="summary-label">限定运动项目</div>
+            <div class="summary-numbers">
+              <span class="completed">{{ goalSummary.specified?.completedGoals || 0 }}</span>
+              <span class="separator">/</span>
+              <span class="total">{{ goalSummary.specified?.totalGoals || 0 }}</span>
+              <span class="summary-unit">个已达成</span>
+            </div>
+            <div class="summary-rate">达成率 {{ goalSummary.specified?.achievementRate || 0 }}%</div>
+          </div>
+        </div>
+        <div class="summary-block">
+          <div class="summary-icon">📚</div>
+          <div class="summary-body">
+            <div class="summary-label">不限运动项目</div>
+            <div class="summary-numbers">
+              <span class="completed">{{ goalSummary.unspecified?.completedGoals || 0 }}</span>
+              <span class="separator">/</span>
+              <span class="total">{{ goalSummary.unspecified?.totalGoals || 0 }}</span>
+              <span class="summary-unit">个已达成</span>
+            </div>
+            <div class="summary-rate">达成率 {{ goalSummary.unspecified?.achievementRate || 0 }}%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <div class="charts-grid">
       <div class="card chart-card">
         <div class="card-header">
@@ -99,6 +146,7 @@ const weeklyStats = reactive({ count: 0, duration: 0, calories: 0 })
 const monthlyStats = reactive({ count: 0, duration: 0, calories: 0 })
 const trendData = ref([])
 const distributionData = ref([])
+const goalSummary = ref({})
 
 const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
 
@@ -201,11 +249,23 @@ async function fetchDistribution() {
   }
 }
 
+async function fetchGoalSummary() {
+  try {
+    const response = await api.get('/api/stats/goals/achievement')
+    if (response.data.success) {
+      goalSummary.value = response.data.data
+    }
+  } catch (error) {
+    console.error('获取目标达成汇总失败:', error)
+  }
+}
+
 onMounted(() => {
   fetchWeeklyStats()
   fetchMonthlyStats()
   fetchTrend()
   fetchDistribution()
+  fetchGoalSummary()
 })
 </script>
 
@@ -222,6 +282,74 @@ onMounted(() => {
   grid-template-columns: 3fr 2fr;
   gap: 1.5rem;
   margin-bottom: 1.5rem;
+}
+
+.goal-summary-card {
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.goal-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.summary-block {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 0.75rem;
+}
+
+.summary-block.summary-total {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.summary-icon {
+  font-size: 2rem;
+}
+
+.summary-label {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  margin-bottom: 0.375rem;
+}
+
+.summary-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.summary-numbers .completed {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #34d399;
+}
+
+.summary-numbers .separator,
+.summary-numbers .total {
+  font-size: 1.125rem;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.summary-unit {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin-left: 0.25rem;
+}
+
+.summary-rate {
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+  color: #a5b4fc;
+  font-weight: 500;
 }
 
 .chart-card {
@@ -253,6 +381,10 @@ onMounted(() => {
   }
   
   .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .goal-summary-grid {
     grid-template-columns: 1fr;
   }
 }

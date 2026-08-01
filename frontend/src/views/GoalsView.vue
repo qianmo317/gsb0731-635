@@ -11,8 +11,13 @@
       <div v-for="goal in goals" :key="goal.id" class="goal-card">
         <div class="goal-header">
           <div class="goal-type">
-            <span class="goal-icon">{{ getGoalIcon(goal.goalType) }}</span>
+            <span class="goal-icon" v-if="goal.sportTypeIcon">{{ goal.sportTypeIcon }}</span>
+            <span class="goal-icon" v-else>{{ getGoalIcon(goal.goalType) }}</span>
             <span class="goal-type-name">{{ getGoalTypeName(goal.goalType) }}</span>
+            <span v-if="goal.sportTypeId" class="sport-tag" :style="getSportTagStyle(goal.sportTypeColor)">
+              {{ goal.sportTypeName }}
+            </span>
+            <span v-else class="sport-tag sport-tag-all">全部运动</span>
           </div>
           <span :class="['status-badge', getStatusClass(goal.status)]">
             {{ getStatusName(goal.status) }}
@@ -77,6 +82,17 @@
                 <option value="COUNT">🔢 运动次数</option>
               </select>
             </div>
+
+            <div class="form-group">
+              <label class="form-label">限定运动项目</label>
+              <select v-model="form.sportTypeId" class="form-input">
+                <option :value="null">不限运动项目（累计所有运动）</option>
+                <option v-for="type in exerciseTypes" :key="type.id" :value="type.id">
+                  {{ type.icon }} {{ type.name }}
+                </option>
+              </select>
+              <span class="form-hint">选择后，仅统计该运动项目的记录；留空则保持原统计口径。</span>
+            </div>
             
             <div class="form-group">
               <label class="form-label">目标值 ({{ getGoalUnit(form.goalType) }})</label>
@@ -125,6 +141,7 @@ import ConfirmModal from '../components/ConfirmModal.vue'
 const toast = useToastStore()
 
 const goals = ref([])
+const exerciseTypes = ref([])
 const showModal = ref(false)
 const isEditing = ref(false)
 const editingId = ref(null)
@@ -137,6 +154,7 @@ const goalToDelete = ref(null)
 const form = reactive({
   title: '',
   goalType: 'CALORIES',
+  sportTypeId: null,
   targetValue: 1000,
   startDate: new Date().toISOString().split('T')[0],
   endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -153,12 +171,24 @@ async function fetchGoals() {
   }
 }
 
+async function fetchExerciseTypes() {
+  try {
+    const response = await api.get('/api/exercise-types')
+    if (response.data.success) {
+      exerciseTypes.value = response.data.data
+    }
+  } catch (error) {
+    console.error('获取运动类型失败:', error)
+  }
+}
+
 function openModal(goal = null) {
   if (goal) {
     isEditing.value = true
     editingId.value = goal.id
     form.title = goal.title || ''
     form.goalType = goal.goalType
+    form.sportTypeId = goal.sportTypeId || null
     form.targetValue = goal.targetValue
     form.startDate = goal.startDate
     form.endDate = goal.endDate
@@ -167,6 +197,7 @@ function openModal(goal = null) {
     editingId.value = null
     form.title = ''
     form.goalType = 'CALORIES'
+    form.sportTypeId = null
     form.targetValue = 1000
     form.startDate = new Date().toISOString().split('T')[0]
     form.endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -181,7 +212,10 @@ function closeModal() {
 async function handleSubmit() {
   loading.value = true
   try {
-    const data = { ...form }
+    const data = {
+      ...form,
+      sportTypeId: form.sportTypeId || null
+    }
     
     if (isEditing.value) {
       await api.put(`/api/goals/${editingId.value}`, data)
@@ -235,6 +269,14 @@ function getGoalUnit(type) {
   return units[type] || ''
 }
 
+function getSportTagStyle(color) {
+  return {
+    backgroundColor: color ? `${color}30` : 'rgba(99, 102, 241, 0.15)',
+    color: color || '#818cf8',
+    borderColor: color ? `${color}55` : 'rgba(99, 102, 241, 0.3)'
+  }
+}
+
 function getStatusName(status) {
   const names = { ACTIVE: '进行中', COMPLETED: '已完成', FAILED: '未达成' }
   return names[status] || status
@@ -259,6 +301,7 @@ function formatDate(date) {
 
 onMounted(() => {
   fetchGoals()
+  fetchExerciseTypes()
 })
 </script>
 
@@ -315,6 +358,28 @@ onMounted(() => {
   color: #94a3b8;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.sport-tag {
+  padding: 0.25rem 0.625rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid;
+  margin-left: 0.25rem;
+}
+
+.sport-tag-all {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.form-hint {
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  color: #64748b;
 }
 
 .status-badge {
