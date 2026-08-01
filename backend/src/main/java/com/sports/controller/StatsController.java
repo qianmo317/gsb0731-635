@@ -53,4 +53,10 @@ public class StatsController {
         List<Map<String, Object>> distribution = statsService.getExerciseTypeDistribution(user.getId());
         return ResponseEntity.ok(ApiResponse.success(distribution));
     }
+
+    @GetMapping("/goals/achievement")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getGoalAchievementSummary(@AuthenticationPrincipal User user) {
+        Map<String, Object> summary = statsService.getGoalAchievementSummary(user.getId());
+        return ResponseEntity.ok(ApiResponse.success(summary));
+    }
 }

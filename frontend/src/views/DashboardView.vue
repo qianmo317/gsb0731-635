@@ -69,9 +69,12 @@
         <div class="goals-list" v-if="activeGoals.length">
           <div v-for="goal in activeGoals" :key="goal.id" class="goal-item">
             <div class="goal-info">
-              <span class="goal-icon">{{ getGoalIcon(goal.goalType) }}</span>
+              <span class="goal-icon">{{ goal.sportTypeIcon || getGoalIcon(goal.goalType) }}</span>
               <div class="goal-details">
-                <div class="goal-title">{{ goal.title || getGoalTypeName(goal.goalType) }}</div>
+                <div class="goal-title">
+                  {{ goal.title || getGoalTypeName(goal.goalType) }}
+                  <span class="goal-sport-label">{{ goal.sportTypeName || '全部运动' }}</span>
+                </div>
                 <div class="goal-progress-text">
                   {{ goal.currentValue }} / {{ goal.targetValue }} {{ getGoalUnit(goal.goalType) }}
                 </div>
@@ -385,6 +388,16 @@ onMounted(() => {
 .goal-title {
   font-weight: 500;
   margin-bottom: 0.25rem;
+}
+
+.goal-sport-label {
+  margin-left: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 1rem;
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .goal-progress-text {

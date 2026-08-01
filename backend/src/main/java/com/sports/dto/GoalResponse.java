@@ -10,6 +10,10 @@ import java.time.LocalDate;
 public class GoalResponse {
     private Long id;
     private String goalType;
+    private Long sportTypeId;
+    private String sportTypeName;
+    private String sportTypeIcon;
+    private String sportTypeColor;
     private Integer targetValue;
     private Integer currentValue;
     private LocalDate startDate;

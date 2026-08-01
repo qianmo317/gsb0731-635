@@ -27,7 +27,11 @@ public class Goal {
     
     @Column(name = "goal_type", nullable = false, length = 50)
     private String goalType; // CALORIES, DURATION, COUNT
-    
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "sport_type_id")
+    private ExerciseType sportType;
+
     @Column(name = "target_value", nullable = false)
     private Integer targetValue;
     
