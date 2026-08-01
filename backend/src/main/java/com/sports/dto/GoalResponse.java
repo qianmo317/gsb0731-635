@@ -17,4 +17,7 @@ public class GoalResponse {
     private String status;
     private String title;
     private Integer progress;
+    private Long exerciseTypeId;
+    private String exerciseTypeName;
+    private String exerciseTypeIcon;
 }

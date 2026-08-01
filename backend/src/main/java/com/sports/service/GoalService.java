@@ -2,10 +2,12 @@ package com.sports.service;
 
 import com.sports.dto.GoalRequest;
 import com.sports.dto.GoalResponse;
+import com.sports.entity.ExerciseType;
 import com.sports.entity.Goal;
 import com.sports.entity.User;
 import com.sports.exception.BusinessException;
 import com.sports.repository.ExerciseRepository;
+import com.sports.repository.ExerciseTypeRepository;
 import com.sports.repository.GoalRepository;
 import com.sports.repository.UserRepository;
 import org.slf4j.Logger;
@@ -34,11 +36,20 @@ public class GoalService {
     @Autowired
     private ExerciseRepository exerciseRepository;
     
+    @Autowired
+    private ExerciseTypeRepository exerciseTypeRepository;
+    
     public List<GoalResponse> getGoalsByUserId(Long userId) {
         List<Goal> goals = goalRepository.findByUserIdOrderByCreatedAtDesc(userId);
         // 更新目标进度
         goals.forEach(this::updateGoalProgress);
         return goals.stream().map(this::toResponse).toList();
+    }
+    
+    @Transactional
+    public void recalculateUserGoals(Long userId) {
+        List<Goal> goals = goalRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        goals.forEach(this::updateGoalProgress);
     }
     
     @Transactional
@@ -52,6 +63,11 @@ public class GoalService {
             throw new BusinessException("结束日期不能早于开始日期");
         }
         
+        if (request.getExerciseTypeId() != null) {
+            exerciseTypeRepository.findById(request.getExerciseTypeId())
+                    .orElseThrow(() -> new BusinessException("选择的运动类型不存在"));
+        }
+        
         Goal goal = new Goal();
         goal.setUser(user);
         goal.setGoalType(request.getGoalType());
@@ -59,6 +75,7 @@ public class GoalService {
         goal.setStartDate(request.getStartDate());
         goal.setEndDate(request.getEndDate());
         goal.setTitle(request.getTitle());
+        goal.setExerciseTypeId(request.getExerciseTypeId());
         goal.setCurrentValue(0);
         goal.setStatus("ACTIVE");
         
@@ -80,11 +97,17 @@ public class GoalService {
             throw new BusinessException("无权操作此目标");
         }
         
+        if (request.getExerciseTypeId() != null) {
+            exerciseTypeRepository.findById(request.getExerciseTypeId())
+                    .orElseThrow(() -> new BusinessException("选择的运动类型不存在"));
+        }
+        
         goal.setGoalType(request.getGoalType());
         goal.setTargetValue(request.getTargetValue());
         goal.setStartDate(request.getStartDate());
         goal.setEndDate(request.getEndDate());
         goal.setTitle(request.getTitle());
+        goal.setExerciseTypeId(request.getExerciseTypeId());
         
         Goal saved = goalRepository.save(goal);
         updateGoalProgress(saved);
@@ -110,17 +133,24 @@ public class GoalService {
         Long userId = goal.getUser().getId();
         LocalDate start = goal.getStartDate();
         LocalDate end = goal.getEndDate();
+        Long typeId = goal.getExerciseTypeId();
         
         Integer currentValue = 0;
         switch (goal.getGoalType()) {
             case "CALORIES":
-                currentValue = exerciseRepository.sumCaloriesByUserIdAndDateRange(userId, start, end);
+                currentValue = typeId != null
+                        ? exerciseRepository.sumCaloriesByUserIdAndDateRangeAndTypeId(userId, start, end, typeId)
+                        : exerciseRepository.sumCaloriesByUserIdAndDateRange(userId, start, end);
                 break;
             case "DURATION":
-                currentValue = exerciseRepository.sumDurationByUserIdAndDateRange(userId, start, end);
+                currentValue = typeId != null
+                        ? exerciseRepository.sumDurationByUserIdAndDateRangeAndTypeId(userId, start, end, typeId)
+                        : exerciseRepository.sumDurationByUserIdAndDateRange(userId, start, end);
                 break;
             case "COUNT":
-                Long count = exerciseRepository.countByUserIdAndDateRange(userId, start, end);
+                Long count = typeId != null
+                        ? exerciseRepository.countByUserIdAndDateRangeAndTypeId(userId, start, end, typeId)
+                        : exerciseRepository.countByUserIdAndDateRange(userId, start, end);
                 currentValue = count != null ? count.intValue() : 0;
                 break;
         }
@@ -132,6 +162,8 @@ public class GoalService {
             goal.setStatus("COMPLETED");
         } else if (LocalDate.now().isAfter(goal.getEndDate())) {
             goal.setStatus("FAILED");
+        } else {
+            goal.setStatus("ACTIVE");
         }
         
         goalRepository.save(goal);
@@ -148,6 +180,16 @@ public class GoalService {
         response.setStatus(goal.getStatus());
         response.setTitle(goal.getTitle());
         response.setProgress(goal.getProgress());
+        
+        if (goal.getExerciseTypeId() != null) {
+            response.setExerciseTypeId(goal.getExerciseTypeId());
+            ExerciseType exerciseType = exerciseTypeRepository.findById(goal.getExerciseTypeId()).orElse(null);
+            if (exerciseType != null) {
+                response.setExerciseTypeName(exerciseType.getName());
+                response.setExerciseTypeIcon(exerciseType.getIcon());
+            }
+        }
+        
         return response;
     }
 }

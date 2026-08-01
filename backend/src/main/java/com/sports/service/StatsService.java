@@ -1,10 +1,12 @@
 package com.sports.service;
 
 import com.sports.dto.StatsResponse;
+import com.sports.entity.Goal;
 import com.sports.repository.ExerciseRepository;
 import com.sports.repository.GoalRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -23,6 +25,10 @@ public class StatsService {
     @Autowired
     private GoalRepository goalRepository;
     
+    @Autowired
+    private GoalService goalService;
+    
+    @Transactional
     public StatsResponse getOverview(Long userId) {
         StatsResponse response = new StatsResponse();
         
@@ -43,7 +49,9 @@ public class StatsService {
         Integer totalCalories = exerciseRepository.sumCaloriesByUserIdAndDateRange(userId, monthStart, monthEnd);
         response.setTotalCalories(totalCalories != null ? totalCalories : 0);
         
-        // 目标统计
+        // 先刷新所有目标状态，再统计
+        goalService.recalculateUserGoals(userId);
+        
         int activeGoals = goalRepository.findByUserIdAndStatus(userId, "ACTIVE").size();
         int completedGoals = goalRepository.findByUserIdAndStatus(userId, "COMPLETED").size();
         response.setActiveGoals(activeGoals);
@@ -131,5 +139,46 @@ public class StatsService {
         }
         
         return result;
+    }
+    
+    @Transactional
+    public Map<String, Object> getGoalAchievementSummary(Long userId) {
+        goalService.recalculateUserGoals(userId);
+        
+        List<Goal> allGoals = goalRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        
+        List<Goal> unrestrictedGoals = new ArrayList<>();
+        List<Goal> specificSportGoals = new ArrayList<>();
+        
+        for (Goal goal : allGoals) {
+            if (goal.getExerciseTypeId() == null) {
+                unrestrictedGoals.add(goal);
+            } else {
+                specificSportGoals.add(goal);
+            }
+        }
+        
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("unrestricted", buildGroupStats(unrestrictedGoals));
+        result.put("specificSport", buildGroupStats(specificSportGoals));
+        
+        return result;
+    }
+    
+    private Map<String, Object> buildGroupStats(List<Goal> goals) {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        int total = goals.size();
+        int completed = 0;
+        for (Goal goal : goals) {
+            if ("COMPLETED".equals(goal.getStatus())) {
+                completed++;
+            }
+        }
+        double rate = total > 0 ? (completed * 100.0 / total) : 0.0;
+        
+        stats.put("total", total);
+        stats.put("completed", completed);
+        stats.put("rate", Math.round(rate * 10.0) / 10.0);
+        return stats;
     }
 }

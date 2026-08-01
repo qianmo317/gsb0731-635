@@ -26,4 +26,6 @@ public class GoalRequest {
     private LocalDate endDate;
     
     private String title;
+    
+    private Long exerciseTypeId;
 }

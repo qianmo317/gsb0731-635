@@ -46,6 +46,9 @@ public class Goal {
     @Column(length = 100)
     private String title;
     
+    @Column(name = "exercise_type_id")
+    private Long exerciseTypeId;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     

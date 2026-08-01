@@ -37,6 +37,9 @@ public class ExerciseService {
     @Autowired
     private UserRepository userRepository;
     
+    @Autowired
+    private GoalService goalService;
+    
     public Page<ExerciseResponse> getExercisesByUserId(Long userId, int page, int size) {
         Page<Exercise> exercises = exerciseRepository.findByUserIdOrderByExerciseDateDesc(
                 userId, PageRequest.of(page, size));
@@ -79,6 +82,8 @@ public class ExerciseService {
         Exercise saved = exerciseRepository.save(exercise);
         logger.info("运动记录创建成功: id={}", saved.getId());
         
+        goalService.recalculateUserGoals(userId);
+        
         return toResponse(saved);
     }
     
@@ -108,6 +113,9 @@ public class ExerciseService {
         }
         
         Exercise saved = exerciseRepository.save(exercise);
+        
+        goalService.recalculateUserGoals(userId);
+        
         return toResponse(saved);
     }
     
@@ -123,6 +131,8 @@ public class ExerciseService {
         }
         
         exerciseRepository.delete(exercise);
+        
+        goalService.recalculateUserGoals(userId);
     }
     
     private ExerciseResponse toResponse(Exercise exercise) {
