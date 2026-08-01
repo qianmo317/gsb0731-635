@@ -36,6 +36,9 @@ public class ExerciseService {
     
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private GoalService goalService;
     
     public Page<ExerciseResponse> getExercisesByUserId(Long userId, int page, int size) {
         Page<Exercise> exercises = exerciseRepository.findByUserIdOrderByExerciseDateDesc(
@@ -78,7 +81,10 @@ public class ExerciseService {
         
         Exercise saved = exerciseRepository.save(exercise);
         logger.info("运动记录创建成功: id={}", saved.getId());
-        
+
+        // 立刻重算目标进度
+        goalService.recalculateGoalsProgress(userId);
+
         return toResponse(saved);
     }
     
@@ -108,6 +114,10 @@ public class ExerciseService {
         }
         
         Exercise saved = exerciseRepository.save(exercise);
+
+        // 立刻重算目标进度
+        goalService.recalculateGoalsProgress(userId);
+
         return toResponse(saved);
     }
     
@@ -123,6 +133,9 @@ public class ExerciseService {
         }
         
         exerciseRepository.delete(exercise);
+
+        // 立刻重算目标进度
+        goalService.recalculateGoalsProgress(userId);
     }
     
     private ExerciseResponse toResponse(Exercise exercise) {

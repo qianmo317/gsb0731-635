@@ -51,6 +51,48 @@
       </div>
     </div>
     
+    <div class="card goal-summary-card">
+      <div class="card-header">
+        <h3>目标达成汇总</h3>
+      </div>
+      <div class="goal-summary-grid">
+        <div class="goal-summary-group">
+          <div class="goal-summary-title">🎯 限定运动目标</div>
+          <div class="goal-summary-metrics">
+            <div class="metric">
+              <div class="metric-value">{{ goalSummary.typed.totalGoals }}</div>
+              <div class="metric-label">目标数</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value">{{ goalSummary.typed.achievedGoals }}</div>
+              <div class="metric-label">达成数</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value">{{ goalSummary.typed.achievementRate }}%</div>
+              <div class="metric-label">达成率</div>
+            </div>
+          </div>
+        </div>
+        <div class="goal-summary-group">
+          <div class="goal-summary-title">🏅 全部运动目标</div>
+          <div class="goal-summary-metrics">
+            <div class="metric">
+              <div class="metric-value">{{ goalSummary.untyped.totalGoals }}</div>
+              <div class="metric-label">目标数</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value">{{ goalSummary.untyped.achievedGoals }}</div>
+              <div class="metric-label">达成数</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value">{{ goalSummary.untyped.achievementRate }}%</div>
+              <div class="metric-label">达成率</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="card distribution-table">
       <div class="card-header">
         <h3>运动类型统计</h3>
@@ -99,6 +141,11 @@ const weeklyStats = reactive({ count: 0, duration: 0, calories: 0 })
 const monthlyStats = reactive({ count: 0, duration: 0, calories: 0 })
 const trendData = ref([])
 const distributionData = ref([])
+const emptySummary = { totalGoals: 0, achievedGoals: 0, achievementRate: 0 }
+const goalSummary = reactive({
+  typed: { ...emptySummary },
+  untyped: { ...emptySummary }
+})
 
 const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
 
@@ -201,11 +248,24 @@ async function fetchDistribution() {
   }
 }
 
+async function fetchGoalSummary() {
+  try {
+    const response = await api.get('/api/stats/goal-summary')
+    if (response.data.success) {
+      Object.assign(goalSummary.typed, response.data.data.typed)
+      Object.assign(goalSummary.untyped, response.data.data.untyped)
+    }
+  } catch (error) {
+    console.error('获取目标达成汇总失败:', error)
+  }
+}
+
 onMounted(() => {
   fetchWeeklyStats()
   fetchMonthlyStats()
   fetchTrend()
   fetchDistribution()
+  fetchGoalSummary()
 })
 </script>
 
@@ -243,6 +303,50 @@ onMounted(() => {
   height: 280px;
 }
 
+.goal-summary-card {
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.goal-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.goal-summary-group {
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 0.75rem;
+}
+
+.goal-summary-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-bottom: 1rem;
+}
+
+.goal-summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  text-align: center;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.metric-label {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+}
+
 .distribution-table {
   padding: 1.5rem;
 }
@@ -259,6 +363,10 @@ onMounted(() => {
 
 @media (max-width: 640px) {
   .stats-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .goal-summary-grid {
     grid-template-columns: 1fr;
   }
 }

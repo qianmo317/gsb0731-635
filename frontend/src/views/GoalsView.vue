@@ -13,6 +13,7 @@
           <div class="goal-type">
             <span class="goal-icon">{{ getGoalIcon(goal.goalType) }}</span>
             <span class="goal-type-name">{{ getGoalTypeName(goal.goalType) }}</span>
+            <span v-if="goal.exerciseTypeName" class="exercise-type-tag">{{ goal.exerciseTypeName }}</span>
           </div>
           <span :class="['status-badge', getStatusClass(goal.status)]">
             {{ getStatusName(goal.status) }}
@@ -79,6 +80,14 @@
             </div>
             
             <div class="form-group">
+              <label class="form-label">限定运动</label>
+              <select v-model="form.exerciseTypeId" class="form-input">
+                <option :value="null">全部运动（不限定）</option>
+                <option v-for="type in exerciseTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+              </select>
+            </div>
+
+            <div class="form-group">
               <label class="form-label">目标值 ({{ getGoalUnit(form.goalType) }})</label>
               <input type="number" v-model.number="form.targetValue" class="form-input" min="1" required />
             </div>
@@ -125,6 +134,7 @@ import ConfirmModal from '../components/ConfirmModal.vue'
 const toast = useToastStore()
 
 const goals = ref([])
+const exerciseTypes = ref([])
 const showModal = ref(false)
 const isEditing = ref(false)
 const editingId = ref(null)
@@ -137,10 +147,22 @@ const goalToDelete = ref(null)
 const form = reactive({
   title: '',
   goalType: 'CALORIES',
+  exerciseTypeId: null,
   targetValue: 1000,
   startDate: new Date().toISOString().split('T')[0],
   endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 })
+
+async function fetchExerciseTypes() {
+  try {
+    const response = await api.get('/api/exercise-types')
+    if (response.data.success) {
+      exerciseTypes.value = response.data.data
+    }
+  } catch (error) {
+    toast.error('获取运动类型失败')
+  }
+}
 
 async function fetchGoals() {
   try {
@@ -159,6 +181,7 @@ function openModal(goal = null) {
     editingId.value = goal.id
     form.title = goal.title || ''
     form.goalType = goal.goalType
+    form.exerciseTypeId = goal.exerciseTypeId ?? null
     form.targetValue = goal.targetValue
     form.startDate = goal.startDate
     form.endDate = goal.endDate
@@ -167,6 +190,7 @@ function openModal(goal = null) {
     editingId.value = null
     form.title = ''
     form.goalType = 'CALORIES'
+    form.exerciseTypeId = null
     form.targetValue = 1000
     form.startDate = new Date().toISOString().split('T')[0]
     form.endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -259,6 +283,7 @@ function formatDate(date) {
 
 onMounted(() => {
   fetchGoals()
+  fetchExerciseTypes()
 })
 </script>
 
@@ -315,6 +340,16 @@ onMounted(() => {
   color: #94a3b8;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.exercise-type-tag {
+  padding: 0.125rem 0.625rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.3);
 }
 
 .status-badge {

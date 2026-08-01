@@ -26,4 +26,7 @@ public class GoalRequest {
     private LocalDate endDate;
     
     private String title;
+
+    // 可选：限定运动类型ID，为空表示统计全部运动
+    private Long exerciseTypeId;
 }
