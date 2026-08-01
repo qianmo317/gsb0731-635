@@ -73,6 +73,55 @@
       </table>
       <div v-else class="empty-state">暂无数据</div>
     </div>
+    
+    <div class="card goal-summary-card">
+      <div class="card-header">
+        <h3>目标达成汇总</h3>
+      </div>
+      <div class="goal-summary-grid">
+        <div class="goal-summary-group">
+          <div class="summary-group-header">
+            <span class="summary-group-icon">🎯</span>
+            <span class="summary-group-title">不限运动项目</span>
+          </div>
+          <div class="summary-group-body">
+            <div class="summary-stat">
+              <span class="summary-stat-value">{{ goalSummary.unrestricted?.completed || 0 }}</span>
+              <span class="summary-stat-divider">/</span>
+              <span class="summary-stat-total">{{ goalSummary.unrestricted?.total || 0 }}</span>
+              <span class="summary-stat-label">已达成 / 总数</span>
+            </div>
+            <div class="summary-rate-row">
+              <div class="summary-rate-bar">
+                <div class="summary-rate-fill" :style="{ width: (goalSummary.unrestricted?.rate || 0) + '%' }"></div>
+              </div>
+              <span class="summary-rate-text">{{ goalSummary.unrestricted?.rate || 0 }}%</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="goal-summary-group">
+          <div class="summary-group-header">
+            <span class="summary-group-icon">🏃</span>
+            <span class="summary-group-title">限定运动项目</span>
+          </div>
+          <div class="summary-group-body">
+            <div class="summary-stat">
+              <span class="summary-stat-value">{{ goalSummary.specificSport?.completed || 0 }}</span>
+              <span class="summary-stat-divider">/</span>
+              <span class="summary-stat-total">{{ goalSummary.specificSport?.total || 0 }}</span>
+              <span class="summary-stat-label">已达成 / 总数</span>
+            </div>
+            <div class="summary-rate-row">
+              <div class="summary-rate-bar">
+                <div class="summary-rate-fill specific" :style="{ width: (goalSummary.specificSport?.rate || 0) + '%' }"></div>
+              </div>
+              <span class="summary-rate-text">{{ goalSummary.specificSport?.rate || 0 }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -99,6 +148,10 @@ const weeklyStats = reactive({ count: 0, duration: 0, calories: 0 })
 const monthlyStats = reactive({ count: 0, duration: 0, calories: 0 })
 const trendData = ref([])
 const distributionData = ref([])
+const goalSummary = reactive({
+  unrestricted: { total: 0, completed: 0, rate: 0 },
+  specificSport: { total: 0, completed: 0, rate: 0 }
+})
 
 const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
 
@@ -201,11 +254,29 @@ async function fetchDistribution() {
   }
 }
 
+async function fetchGoalSummary() {
+  try {
+    const response = await api.get('/api/stats/goals-summary')
+    if (response.data.success) {
+      const data = response.data.data
+      if (data.unrestricted) {
+        Object.assign(goalSummary.unrestricted, data.unrestricted)
+      }
+      if (data.specificSport) {
+        Object.assign(goalSummary.specificSport, data.specificSport)
+      }
+    }
+  } catch (error) {
+    console.error('获取目标达成汇总失败:', error)
+  }
+}
+
 onMounted(() => {
   fetchWeeklyStats()
   fetchMonthlyStats()
   fetchTrend()
   fetchDistribution()
+  fetchGoalSummary()
 })
 </script>
 
@@ -247,6 +318,108 @@ onMounted(() => {
   padding: 1.5rem;
 }
 
+.goal-summary-card {
+  padding: 1.5rem;
+}
+
+.goal-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.goal-summary-group {
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 0.75rem;
+}
+
+.summary-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.summary-group-icon {
+  font-size: 1.25rem;
+}
+
+.summary-group-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.summary-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.summary-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.summary-stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.summary-stat-divider {
+  font-size: 1.25rem;
+  color: #64748b;
+}
+
+.summary-stat-total {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.summary-stat-label {
+  margin-left: 0.5rem;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.summary-rate-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.summary-rate-bar {
+  flex: 1;
+  height: 0.5rem;
+  background: rgba(71, 85, 105, 0.4);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.summary-rate-fill {
+  height: 100%;
+  border-radius: 1rem;
+  background: linear-gradient(90deg, #6366f1, #10b981);
+  transition: width 0.5s ease;
+}
+
+.summary-rate-fill.specific {
+  background: linear-gradient(90deg, #8b5cf6, #06b6d4);
+}
+
+.summary-rate-text {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #a5b4fc;
+  min-width: 3rem;
+  text-align: right;
+}
+
 @media (max-width: 1024px) {
   .stats-overview {
     grid-template-columns: repeat(2, 1fr);
@@ -259,6 +432,10 @@ onMounted(() => {
 
 @media (max-width: 640px) {
   .stats-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .goal-summary-grid {
     grid-template-columns: 1fr;
   }
 }

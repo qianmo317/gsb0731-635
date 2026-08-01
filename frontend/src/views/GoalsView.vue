@@ -19,6 +19,11 @@
           </span>
         </div>
         
+        <div v-if="goal.exerciseTypeId" class="goal-sport-tag">
+          <span class="sport-tag-icon">{{ goal.exerciseTypeIcon }}</span>
+          <span class="sport-tag-name">{{ goal.exerciseTypeName }}</span>
+        </div>
+        
         <h3 class="goal-title">{{ goal.title || getGoalTypeName(goal.goalType) }}</h3>
         
         <div class="goal-progress-section">
@@ -83,6 +88,16 @@
               <input type="number" v-model.number="form.targetValue" class="form-input" min="1" required />
             </div>
             
+            <div class="form-group">
+              <label class="form-label">限定运动项目 <span class="form-label-hint">（不选则统计所有运动）</span></label>
+              <select v-model="form.exerciseTypeId" class="form-input">
+                <option :value="null">全部运动</option>
+                <option v-for="t in exerciseTypes" :key="t.id" :value="t.id">
+                  {{ t.icon }} {{ t.name }}
+                </option>
+              </select>
+            </div>
+            
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">开始日期</label>
@@ -125,6 +140,7 @@ import ConfirmModal from '../components/ConfirmModal.vue'
 const toast = useToastStore()
 
 const goals = ref([])
+const exerciseTypes = ref([])
 const showModal = ref(false)
 const isEditing = ref(false)
 const editingId = ref(null)
@@ -139,7 +155,8 @@ const form = reactive({
   goalType: 'CALORIES',
   targetValue: 1000,
   startDate: new Date().toISOString().split('T')[0],
-  endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  exerciseTypeId: null
 })
 
 async function fetchGoals() {
@@ -153,6 +170,17 @@ async function fetchGoals() {
   }
 }
 
+async function fetchExerciseTypes() {
+  try {
+    const response = await api.get('/api/exercise-types')
+    if (response.data.success) {
+      exerciseTypes.value = response.data.data
+    }
+  } catch (error) {
+    toast.error('获取运动类型失败')
+  }
+}
+
 function openModal(goal = null) {
   if (goal) {
     isEditing.value = true
@@ -162,6 +190,7 @@ function openModal(goal = null) {
     form.targetValue = goal.targetValue
     form.startDate = goal.startDate
     form.endDate = goal.endDate
+    form.exerciseTypeId = goal.exerciseTypeId || null
   } else {
     isEditing.value = false
     editingId.value = null
@@ -170,6 +199,7 @@ function openModal(goal = null) {
     form.targetValue = 1000
     form.startDate = new Date().toISOString().split('T')[0]
     form.endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    form.exerciseTypeId = null
   }
   showModal.value = true
 }
@@ -259,6 +289,7 @@ function formatDate(date) {
 
 onMounted(() => {
   fetchGoals()
+  fetchExerciseTypes()
 })
 </script>
 
@@ -315,6 +346,33 @@ onMounted(() => {
   color: #94a3b8;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.goal-sport-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 2rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.8125rem;
+  color: #c4b5fd;
+}
+
+.sport-tag-icon {
+  font-size: 1rem;
+}
+
+.sport-tag-name {
+  font-weight: 500;
+}
+
+.form-label-hint {
+  color: #64748b;
+  font-weight: 400;
+  font-size: 0.8125rem;
 }
 
 .status-badge {
