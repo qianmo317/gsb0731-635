@@ -14,6 +14,8 @@ public class StatsResponse {
     private Integer totalCalories;
     private Integer activeGoals;
     private Integer completedGoals;
+    // 目标达成汇总，按是否限定运动项目分组
+    private List<Map<String, Object>> goalAchievement;
     private List<Map<String, Object>> caloriesTrend;
     private List<Map<String, Object>> exerciseTypeDistribution;
     private List<Map<String, Object>> weeklyStats;

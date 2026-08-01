@@ -29,6 +29,15 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
     @Query("SELECT COUNT(e) FROM Exercise e WHERE e.user.id = :userId AND e.exerciseDate BETWEEN :startDate AND :endDate")
     Long countByUserIdAndDateRange(@Param("userId") Long userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
     
+    @Query("SELECT SUM(e.caloriesBurned) FROM Exercise e WHERE e.user.id = :userId AND e.exerciseType.id = :typeId AND e.exerciseDate BETWEEN :startDate AND :endDate")
+    Integer sumCaloriesByUserIdAndTypeAndDateRange(@Param("userId") Long userId, @Param("typeId") Long typeId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    
+    @Query("SELECT SUM(e.durationMinutes) FROM Exercise e WHERE e.user.id = :userId AND e.exerciseType.id = :typeId AND e.exerciseDate BETWEEN :startDate AND :endDate")
+    Integer sumDurationByUserIdAndTypeAndDateRange(@Param("userId") Long userId, @Param("typeId") Long typeId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    
+    @Query("SELECT COUNT(e) FROM Exercise e WHERE e.user.id = :userId AND e.exerciseType.id = :typeId AND e.exerciseDate BETWEEN :startDate AND :endDate")
+    Long countByUserIdAndTypeAndDateRange(@Param("userId") Long userId, @Param("typeId") Long typeId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    
     @Query("SELECT e.exerciseType.name, COUNT(e) FROM Exercise e WHERE e.user.id = :userId GROUP BY e.exerciseType.name")
     List<Object[]> countByExerciseType(@Param("userId") Long userId);
     

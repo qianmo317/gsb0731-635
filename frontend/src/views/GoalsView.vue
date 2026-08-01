@@ -21,6 +21,14 @@
         
         <h3 class="goal-title">{{ goal.title || getGoalTypeName(goal.goalType) }}</h3>
         
+        <div class="goal-scope">
+          <span v-if="goal.exerciseTypeId" class="scope-tag scope-limited">
+            <span>{{ goal.exerciseTypeIcon || '🎯' }}</span>
+            仅限 {{ goal.exerciseTypeName }}
+          </span>
+          <span v-else class="scope-tag scope-all">全部运动</span>
+        </div>
+        
         <div class="goal-progress-section">
           <div class="progress-header">
             <span class="progress-text">
@@ -79,6 +87,17 @@
             </div>
             
             <div class="form-group">
+              <label class="form-label">限定运动项目</label>
+              <select v-model="form.exerciseTypeId" class="form-input">
+                <option :value="null">全部运动（不限定）</option>
+                <option v-for="type in exerciseTypes" :key="type.id" :value="type.id">
+                  {{ type.icon }} {{ type.name }}
+                </option>
+              </select>
+              <p class="form-hint">限定后仅统计该项目的运动记录</p>
+            </div>
+            
+            <div class="form-group">
               <label class="form-label">目标值 ({{ getGoalUnit(form.goalType) }})</label>
               <input type="number" v-model.number="form.targetValue" class="form-input" min="1" required />
             </div>
@@ -125,6 +144,7 @@ import ConfirmModal from '../components/ConfirmModal.vue'
 const toast = useToastStore()
 
 const goals = ref([])
+const exerciseTypes = ref([])
 const showModal = ref(false)
 const isEditing = ref(false)
 const editingId = ref(null)
@@ -137,6 +157,7 @@ const goalToDelete = ref(null)
 const form = reactive({
   title: '',
   goalType: 'CALORIES',
+  exerciseTypeId: null,
   targetValue: 1000,
   startDate: new Date().toISOString().split('T')[0],
   endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -153,12 +174,24 @@ async function fetchGoals() {
   }
 }
 
+async function fetchExerciseTypes() {
+  try {
+    const response = await api.get('/api/exercise-types')
+    if (response.data.success) {
+      exerciseTypes.value = response.data.data
+    }
+  } catch (error) {
+    console.error('获取运动类型失败:', error)
+  }
+}
+
 function openModal(goal = null) {
   if (goal) {
     isEditing.value = true
     editingId.value = goal.id
     form.title = goal.title || ''
     form.goalType = goal.goalType
+    form.exerciseTypeId = goal.exerciseTypeId ?? null
     form.targetValue = goal.targetValue
     form.startDate = goal.startDate
     form.endDate = goal.endDate
@@ -167,6 +200,7 @@ function openModal(goal = null) {
     editingId.value = null
     form.title = ''
     form.goalType = 'CALORIES'
+    form.exerciseTypeId = null
     form.targetValue = 1000
     form.startDate = new Date().toISOString().split('T')[0]
     form.endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -259,6 +293,7 @@ function formatDate(date) {
 
 onMounted(() => {
   fetchGoals()
+  fetchExerciseTypes()
 })
 </script>
 
@@ -349,6 +384,39 @@ onMounted(() => {
   font-weight: 600;
   margin-bottom: 1.25rem;
   color: #f8fafc;
+}
+
+.goal-scope {
+  margin-top: -0.75rem;
+  margin-bottom: 1rem;
+}
+
+.scope-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.scope-limited {
+  background: rgba(139, 92, 246, 0.18);
+  color: #c4b5fd;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.scope-all {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.form-hint {
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
 }
 
 .goal-progress-section {

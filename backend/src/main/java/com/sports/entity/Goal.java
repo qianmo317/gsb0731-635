@@ -28,6 +28,11 @@ public class Goal {
     @Column(name = "goal_type", nullable = false, length = 50)
     private String goalType; // CALORIES, DURATION, COUNT
     
+    // 目标限定的运动类型；为 null 表示不限定（沿用旧的全量统计口径）
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "exercise_type_id")
+    private ExerciseType exerciseType;
+    
     @Column(name = "target_value", nullable = false)
     private Integer targetValue;
     
