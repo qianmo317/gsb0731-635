@@ -28,6 +28,12 @@ public class StatsController {
         return ResponseEntity.ok(ApiResponse.success(stats));
     }
     
+    @GetMapping("/goal-summary")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getGoalAchievementSummary(@AuthenticationPrincipal User user) {
+        Map<String, Object> summary = statsService.getGoalAchievementSummary(user.getId());
+        return ResponseEntity.ok(ApiResponse.success(summary));
+    }
+
     @GetMapping("/weekly")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getWeeklyStats(@AuthenticationPrincipal User user) {
         Map<String, Object> stats = statsService.getWeeklyStats(user.getId());

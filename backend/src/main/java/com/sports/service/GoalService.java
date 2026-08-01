@@ -2,10 +2,12 @@ package com.sports.service;
 
 import com.sports.dto.GoalRequest;
 import com.sports.dto.GoalResponse;
+import com.sports.entity.ExerciseType;
 import com.sports.entity.Goal;
 import com.sports.entity.User;
 import com.sports.exception.BusinessException;
 import com.sports.repository.ExerciseRepository;
+import com.sports.repository.ExerciseTypeRepository;
 import com.sports.repository.GoalRepository;
 import com.sports.repository.UserRepository;
 import org.slf4j.Logger;
@@ -33,12 +35,24 @@ public class GoalService {
     
     @Autowired
     private ExerciseRepository exerciseRepository;
+
+    @Autowired
+    private ExerciseTypeRepository exerciseTypeRepository;
     
     public List<GoalResponse> getGoalsByUserId(Long userId) {
         List<Goal> goals = goalRepository.findByUserIdOrderByCreatedAtDesc(userId);
         // 更新目标进度
         goals.forEach(this::updateGoalProgress);
         return goals.stream().map(this::toResponse).toList();
+    }
+
+    /**
+     * 运动记录增删改后调用，立刻重算该用户所有目标的进度与状态
+     */
+    @Transactional
+    public void recalculateGoalsProgress(Long userId) {
+        List<Goal> goals = goalRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        goals.forEach(this::updateGoalProgress);
     }
     
     @Transactional
@@ -59,6 +73,7 @@ public class GoalService {
         goal.setStartDate(request.getStartDate());
         goal.setEndDate(request.getEndDate());
         goal.setTitle(request.getTitle());
+        goal.setExerciseType(resolveExerciseType(request.getExerciseTypeId()));
         goal.setCurrentValue(0);
         goal.setStatus("ACTIVE");
         
@@ -85,7 +100,8 @@ public class GoalService {
         goal.setStartDate(request.getStartDate());
         goal.setEndDate(request.getEndDate());
         goal.setTitle(request.getTitle());
-        
+        goal.setExerciseType(resolveExerciseType(request.getExerciseTypeId()));
+
         Goal saved = goalRepository.save(goal);
         updateGoalProgress(saved);
         
@@ -106,32 +122,50 @@ public class GoalService {
         goalRepository.delete(goal);
     }
     
+    private ExerciseType resolveExerciseType(Long exerciseTypeId) {
+        if (exerciseTypeId == null) {
+            return null;
+        }
+        return exerciseTypeRepository.findById(exerciseTypeId)
+                .orElseThrow(() -> new BusinessException("运动类型不存在"));
+    }
+
     private void updateGoalProgress(Goal goal) {
         Long userId = goal.getUser().getId();
         LocalDate start = goal.getStartDate();
         LocalDate end = goal.getEndDate();
-        
+        // 限定运动类型的目标只统计该项目记录；未限定的老目标沿用全部运动的统计口径
+        Long typeId = goal.getExerciseType() != null ? goal.getExerciseType().getId() : null;
+
         Integer currentValue = 0;
         switch (goal.getGoalType()) {
             case "CALORIES":
-                currentValue = exerciseRepository.sumCaloriesByUserIdAndDateRange(userId, start, end);
+                currentValue = typeId != null
+                        ? exerciseRepository.sumCaloriesByUserIdAndTypeIdAndDateRange(userId, typeId, start, end)
+                        : exerciseRepository.sumCaloriesByUserIdAndDateRange(userId, start, end);
                 break;
             case "DURATION":
-                currentValue = exerciseRepository.sumDurationByUserIdAndDateRange(userId, start, end);
+                currentValue = typeId != null
+                        ? exerciseRepository.sumDurationByUserIdAndTypeIdAndDateRange(userId, typeId, start, end)
+                        : exerciseRepository.sumDurationByUserIdAndDateRange(userId, start, end);
                 break;
             case "COUNT":
-                Long count = exerciseRepository.countByUserIdAndDateRange(userId, start, end);
+                Long count = typeId != null
+                        ? exerciseRepository.countByUserIdAndTypeIdAndDateRange(userId, typeId, start, end)
+                        : exerciseRepository.countByUserIdAndDateRange(userId, start, end);
                 currentValue = count != null ? count.intValue() : 0;
                 break;
         }
         
         goal.setCurrentValue(currentValue != null ? currentValue : 0);
         
-        // 更新状态
+        // 更新状态：未达标且未过期时退回进行中，保证目标调大或延期后状态正确
         if (goal.getCurrentValue() >= goal.getTargetValue()) {
             goal.setStatus("COMPLETED");
         } else if (LocalDate.now().isAfter(goal.getEndDate())) {
             goal.setStatus("FAILED");
+        } else {
+            goal.setStatus("ACTIVE");
         }
         
         goalRepository.save(goal);
@@ -148,6 +182,10 @@ public class GoalService {
         response.setStatus(goal.getStatus());
         response.setTitle(goal.getTitle());
         response.setProgress(goal.getProgress());
+        if (goal.getExerciseType() != null) {
+            response.setExerciseTypeId(goal.getExerciseType().getId());
+            response.setExerciseTypeName(goal.getExerciseType().getName());
+        }
         return response;
     }
 }

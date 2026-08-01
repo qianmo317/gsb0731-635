@@ -1,6 +1,7 @@
 package com.sports.service;
 
 import com.sports.dto.StatsResponse;
+import com.sports.entity.Goal;
 import com.sports.repository.ExerciseRepository;
 import com.sports.repository.GoalRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +23,16 @@ public class StatsService {
     
     @Autowired
     private GoalRepository goalRepository;
-    
+
+    @Autowired
+    private GoalService goalService;
+
     public StatsResponse getOverview(Long userId) {
         StatsResponse response = new StatsResponse();
-        
+
+        // 先按现行规则刷新目标状态，保证统计与实际状态一致
+        goalService.recalculateGoalsProgress(userId);
+
         // 本月统计
         LocalDate now = LocalDate.now();
         LocalDate monthStart = now.withDayOfMonth(1);
@@ -52,6 +59,33 @@ public class StatsService {
         return response;
     }
     
+    /**
+     * 目标达成汇总：按是否限定运动项目分组统计目标数、达成数和达成率
+     */
+    public Map<String, Object> getGoalAchievementSummary(Long userId) {
+        // 先按现行规则刷新目标状态，保证汇总与实际状态一致
+        goalService.recalculateGoalsProgress(userId);
+
+        List<Goal> goals = goalRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("typed", summarize(goals.stream().filter(g -> g.getExerciseType() != null).toList()));
+        summary.put("untyped", summarize(goals.stream().filter(g -> g.getExerciseType() == null).toList()));
+        return summary;
+    }
+
+    private Map<String, Object> summarize(List<Goal> goals) {
+        int total = goals.size();
+        int achieved = (int) goals.stream().filter(g -> "COMPLETED".equals(g.getStatus())).count();
+        double rate = total == 0 ? 0 : Math.round(achieved * 1000.0 / total) / 10.0;
+
+        Map<String, Object> item = new HashMap<>();
+        item.put("totalGoals", total);
+        item.put("achievedGoals", achieved);
+        item.put("achievementRate", rate);
+        return item;
+    }
+
     public Map<String, Object> getWeeklyStats(Long userId) {
         LocalDate now = LocalDate.now();
         LocalDate weekStart = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
