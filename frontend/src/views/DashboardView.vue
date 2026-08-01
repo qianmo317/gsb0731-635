@@ -71,7 +71,12 @@
             <div class="goal-info">
               <span class="goal-icon">{{ getGoalIcon(goal.goalType) }}</span>
               <div class="goal-details">
-                <div class="goal-title">{{ goal.title || getGoalTypeName(goal.goalType) }}</div>
+                <div class="goal-title">
+                  {{ goal.title || getGoalTypeName(goal.goalType) }}
+                  <span v-if="goal.exerciseTypeId" class="goal-scope-tag">
+                    {{ goal.exerciseTypeIcon || '🎯' }} {{ goal.exerciseTypeName }}
+                  </span>
+                </div>
                 <div class="goal-progress-text">
                   {{ goal.currentValue }} / {{ goal.targetValue }} {{ getGoalUnit(goal.goalType) }}
                 </div>
@@ -385,6 +390,16 @@ onMounted(() => {
 .goal-title {
   font-weight: 500;
   margin-bottom: 0.25rem;
+}
+
+.goal-scope-tag {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: rgba(139, 92, 246, 0.18);
+  color: #c4b5fd;
 }
 
 .goal-progress-text {

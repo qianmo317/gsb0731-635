@@ -51,6 +51,24 @@
       </div>
     </div>
     
+    <div class="card goal-achievement" v-if="goalAchievement.length">
+      <div class="card-header">
+        <h3>目标达成汇总</h3>
+      </div>
+      <div class="achievement-grid">
+        <div v-for="group in goalAchievement" :key="group.group" class="achievement-card">
+          <div class="achievement-label">{{ group.label }}</div>
+          <div class="achievement-rate">{{ group.achievementRate }}%</div>
+          <div class="achievement-detail">
+            达成 {{ group.achieved }} / {{ group.total }} 个目标
+          </div>
+          <div class="achievement-track">
+            <div class="achievement-fill" :style="{ width: group.achievementRate + '%' }"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <div class="card distribution-table">
       <div class="card-header">
         <h3>运动类型统计</h3>
@@ -99,6 +117,7 @@ const weeklyStats = reactive({ count: 0, duration: 0, calories: 0 })
 const monthlyStats = reactive({ count: 0, duration: 0, calories: 0 })
 const trendData = ref([])
 const distributionData = ref([])
+const goalAchievement = ref([])
 
 const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
 
@@ -201,11 +220,23 @@ async function fetchDistribution() {
   }
 }
 
+async function fetchOverview() {
+  try {
+    const response = await api.get('/api/stats/overview')
+    if (response.data.success) {
+      goalAchievement.value = response.data.data.goalAchievement || []
+    }
+  } catch (error) {
+    console.error('获取目标达成汇总失败:', error)
+  }
+}
+
 onMounted(() => {
   fetchWeeklyStats()
   fetchMonthlyStats()
   fetchTrend()
   fetchDistribution()
+  fetchOverview()
 })
 </script>
 
@@ -247,6 +278,57 @@ onMounted(() => {
   padding: 1.5rem;
 }
 
+.goal-achievement {
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.achievement-card {
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 0.75rem;
+}
+
+.achievement-label {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.achievement-rate {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #a5b4fc;
+}
+
+.achievement-detail {
+  font-size: 0.8125rem;
+  color: #cbd5e1;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.achievement-track {
+  height: 0.5rem;
+  background: rgba(71, 85, 105, 0.4);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.achievement-fill {
+  height: 100%;
+  border-radius: 1rem;
+  background: linear-gradient(90deg, #8b5cf6, #10b981);
+  transition: width 0.5s ease;
+}
+
 @media (max-width: 1024px) {
   .stats-overview {
     grid-template-columns: repeat(2, 1fr);
@@ -259,6 +341,10 @@ onMounted(() => {
 
 @media (max-width: 640px) {
   .stats-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .achievement-grid {
     grid-template-columns: 1fr;
   }
 }

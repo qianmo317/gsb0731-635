@@ -10,6 +10,10 @@ import java.time.LocalDate;
 public class GoalResponse {
     private Long id;
     private String goalType;
+    // 限定的运动类型信息；为 null 表示不限定（老目标统计口径不变）
+    private Long exerciseTypeId;
+    private String exerciseTypeName;
+    private String exerciseTypeIcon;
     private Integer targetValue;
     private Integer currentValue;
     private LocalDate startDate;

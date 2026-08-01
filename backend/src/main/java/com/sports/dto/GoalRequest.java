@@ -15,6 +15,9 @@ public class GoalRequest {
     @NotBlank(message = "目标类型不能为空")
     private String goalType; // CALORIES, DURATION, COUNT
     
+    // 限定的运动类型ID；为 null 表示不限定，统计所有运动
+    private Long exerciseTypeId;
+    
     @NotNull(message = "目标值不能为空")
     @Positive(message = "目标值必须为正数")
     private Integer targetValue;
